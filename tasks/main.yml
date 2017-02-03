@@ -1,0 +1,36 @@
+- name: "Install dnsmasq"
+  apt:
+    name: dnsmasq
+    state: present
+  tags: ['dnsmasq', 'pkgs']
+
+- name: "Configure dnsmasq"
+  lineinfile:
+    dest: /etc/dnsmasq.conf
+    line: '{{ item.key }}={{ item.value }}'
+    regexp: '^#?{{ item.key }}'
+    state: present
+  with_items:
+    - { key: 'port', value: '53' }
+    - { key: 'listen-address', value: '127.0.0.1' }
+    - { key: 'cache-size', value: '0' }
+  notify: Restart dnsmasq
+  tags: ['dnsmasq']
+
+- name: "Configure the consul domain name"
+  template:
+    src: consul.j2
+    dest: /etc/dnsmasq.d/10-consul
+    owner: root
+    group: root
+    mode: 0644
+  when: consul_domain is defined
+  notify: Restart dnsmasq
+  tags: ['dnsmasq', 'files']
+
+- name: "Ensure dnsmasq is started and enabled on boot"
+  service:
+    name: dnsmasq
+    state: started
+    enabled: yes
+  tags: ['dnsmasq']
